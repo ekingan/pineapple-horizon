@@ -91,6 +91,8 @@ app.get('/top-tracks', function(req, res) {
   // Get top tracks!
   spotifyApi.getMyTopTracks()
     .then(function(data) {
+      console.log(data)
+      console.log(Object.keys(data))
       res.send(data.body);
     }, function(err) {
       console.error(err);
@@ -105,5 +107,84 @@ app.get('/feature', function(req, res) {
   }, function(err) {
     done(err);
   });
-})
+});
 
+//function from: https://stackoverflow.com/a/1053865/7044471
+const frequent = (array) => {
+  if(array.length == 0)
+      return null;
+  var modeMap = {};
+  var maxEl = array[0], maxCount = 1;
+  for(var i = 0; i < array.length; i++)
+  {
+      var el = array[i];
+      if(modeMap[el] == null)
+          modeMap[el] = 1;
+      else
+          modeMap[el]++;
+      if(modeMap[el] > maxCount)
+      {
+          maxEl = el;
+          maxCount = modeMap[el];
+      }
+  }
+  return maxEl;
+};
+
+app.get('/trends', (req, res) => {
+  spotifyApi.getMyRecentlyPlayedTracks({ limit: 10 })
+  .then((data) => data.body.items.map((item) => item.track.id))
+  .then((trackIds) => {
+    spotifyApi.getAudioFeaturesForTracks(trackIds).then((data) => {
+      const features = data?.body?.audio_features;
+      console.log(features[0])
+      let danceability = 0, key = [], loudness = 0, valence = 0, tempo = 0, mode = 0, energy = 0, speechiness = 0,
+        acousticness = 0, instrumentalness = 0, liveness = 0;
+        features.forEach((feature) => {
+          danceability += feature.danceability;
+          key.push(feature.key);
+          loudness += feature.loudness;
+          valence += feature.valence;
+          tempo += feature.tempo;
+          mode += feature.mode;
+          energy += feature.energy;
+          speechiness += feature.speechiness;
+          acousticness += feature.acousticness;
+          instrumentalness += feature.instrumentalness;
+          liveness += feature.liveness;
+        });
+        const obj = {
+          danceability: danceability / features.length,
+          key: frequent(key),
+          loudness: loudness / features.length,
+          valence: valence / features.length,
+          tempo: tempo / features.length,
+          mode: Math.round(mode / features.length),
+          energy: energy / features.length,
+          speechiness: speechiness / features.length,
+          acousticness: acousticness / features.length,
+          instrumentalness: instrumentalness / features.length,
+          liveness: liveness / features.length
+        };
+        console.log(obj)
+        return obj;
+    })
+  })
+});
+
+app.get('/analysis', (req, res) => {
+  spotifyApi.getMyRecentlyPlayedTracks({ limit: 50 })
+  .then(data => data.body.items[Math.floor(Math.random() * 50)])
+  .then(data => {
+    spotifyApi.getAudioAnalysisForTrack(data.track.id)
+    .then(function(data) {
+      console.log(data.body);
+      console.log(Object.keys(data.body));
+      console.log(Object.keys(data.body.meta));
+      const keys = Object.keys(data.body);
+      keys.map(key => console.log(`${key}: ${Object.keys(data.body[key])}`));
+    }, function(err) {
+      done(err);
+    });
+  })
+});
