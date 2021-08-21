@@ -8,7 +8,6 @@ var spotifyApi = new SpotifyWebApi({
   redirectUri: process.env.REDIRECT_URI,
 });
 
-
 const scopes = [
   'ugc-image-upload',
   'user-read-playback-state',
